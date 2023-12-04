@@ -1,0 +1,154 @@
+use std::fs::read_to_string;
+
+struct Symbol {
+    x: u64,
+    y: u64,
+    value: char,
+}
+
+struct Number {
+    x: u64,
+    y: u64,
+    value: String,
+}
+
+fn parse(input: &str) -> (Vec<Symbol>, Vec<Number>) {
+    let mut symbols: Vec<Symbol> = Vec::new();
+    let mut numbers: Vec<Number> = Vec::new();
+    for (y, line) in input.trim().split('\n').enumerate() {
+        let mut cur_number: Vec<char> = Vec::new();
+        let mut cur_pos = (0, 0);
+        for (x, chr) in line.chars().enumerate() {
+            if chr.is_ascii_digit() {
+                if cur_number.is_empty() {
+                    cur_pos = (y, x);
+                }
+                cur_number.push(chr);
+            } else {
+                if !cur_number.is_empty() {
+                    numbers.push(Number {
+                        x: cur_pos.1 as u64,
+                        y: cur_pos.0 as u64,
+                        value: cur_number.clone().into_iter().collect(),
+                    });
+                    cur_number = Vec::new();
+                }
+                if chr != '.' {
+                    symbols.push(Symbol {
+                        x: x as u64,
+                        y: y as u64,
+                        value: chr,
+                    });
+                }
+            }
+        }
+        if !cur_number.is_empty() {
+            numbers.push(Number {
+                x: cur_pos.1 as u64,
+                y: cur_pos.0 as u64,
+                value: cur_number.clone().into_iter().collect(),
+            });
+        }
+    }
+    (symbols, numbers)
+}
+
+fn adjacent(symbol: &Symbol, number: &Number) -> bool {
+    symbol.y <= number.y + 1 && symbol.y >= number.y.saturating_sub(1) &&
+                symbol.x >= number.x.saturating_sub(1)
+                    && symbol.x <= number.x + number.value.len() as u64
+}
+
+fn part_one(symbols: &Vec<Symbol>, numbers: &Vec<Number>) -> u64 {
+    let mut sum: u64 = 0;
+    for number in numbers {
+        let mut adjacent = false;
+        for symbol in symbols {
+            if symbol.y <= number.y + 1 && symbol.y >= number.y.saturating_sub(1) {
+                if symbol.x >= number.x.saturating_sub(1)
+                    && symbol.x <= number.x + number.value.len() as u64
+                {
+                    adjacent = true;
+                    break;
+                }
+            }
+        }
+        if adjacent {
+            sum += number.value.parse::<u64>().unwrap();
+        }
+    }
+    sum
+}
+
+fn part_two(symbols: &Vec<Symbol>, numbers: &Vec<Number>) -> u64 {
+    let mut sum: u64 = 0;
+    for symbol in symbols {
+        if symbol.value != '*' {
+            continue;
+        }
+        let mut adjacent: Vec<u64> = Vec::new();
+        for number in numbers {
+            if symbol.y <= number.y + 1 && symbol.y >= number.y.saturating_sub(1) {
+                if symbol.x >= number.x.saturating_sub(1)
+                    && symbol.x <= number.x + number.value.len() as u64
+                {
+                    adjacent.push(number.value.parse::<u64>().unwrap());
+                }
+            }
+        }
+        if adjacent.len() == 2 {
+            sum += adjacent[0] * adjacent[1];
+        }
+    }
+    sum
+}
+
+fn main() {
+    let input = read_to_string("./input/day03.txt").expect("Cannot read input file");
+    let (symbols, numbers) = parse(&input);
+    println!("Part one: {}", part_one(&symbols, &numbers));
+    println!("Part two: {}", part_two(&symbols, &numbers));
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::parse;
+    use crate::part_one;
+    use crate::part_two;
+
+    #[test]
+    fn test_part_one() {
+        let input = "467..114..\n\
+                     ...*......\n\
+                     ..35..633.\n\
+                     ......#...\n\
+                     617*......\n\
+                     .....+.58.\n\
+                     ..592.....\n\
+                     ......755.\n\
+                     ...$.*....\n\
+                     .664.598..";
+        let (symbols, numbers) = parse(&input);
+        let res = part_one(&symbols, &numbers);
+        let exp: u64 = 4361;
+        assert!(res == exp, "result = {}, expected = {}", res, exp);
+    }
+
+    #[test]
+    fn test_part_two() {
+        let input = "467..114..\n\
+                     ...*......\n\
+                     ..35..633.\n\
+                     ......#...\n\
+                     617*......\n\
+                     .....+.58.\n\
+                     ..592.....\n\
+                     ......755.\n\
+                     ...$.*....\n\
+                     .664.598..";
+        let (symbols, numbers) = parse(&input);
+        let res = part_two(&symbols, &numbers);
+        let exp: u64 = 467835;
+        assert!(res == exp, "result = {}, expected = {}", res, exp);
+    }
+}
